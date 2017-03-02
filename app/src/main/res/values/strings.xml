@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">FoodnGo</string>
+    <string name="where_do_you_wanna_go">Where do you wanna go?</string>
+    <string name="i_don_t_care">I Don\'t Care</string>
+</resources>
