@@ -12,6 +12,7 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AlertDialog;
@@ -39,7 +40,7 @@ import javax.net.ssl.HttpsURLConnection;
 public class MainActivity extends AppCompatActivity {
 
     LocationManager locationManager;
-    String myCoordinates,jsonString, url_request;
+    String myCoordinates, url_request;
     String placeName,placeLat,placeLong, placeCoord;
     String placeURL;
     Button btnIDC;
@@ -59,12 +60,48 @@ public class MainActivity extends AppCompatActivity {
         btnIDC.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                url_request = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?" +
-                        "location=" + myCoordinates +
-                        "&radius=1000&types=restaurant|cafe&" +
-                        "key=" + API_KEY;
 
-                new JsonTask().execute(url_request);
+                long startTime = System.currentTimeMillis();
+
+                while(myCoordinates == null&&(System.currentTimeMillis()-startTime)<30000) {
+                    pd = new ProgressDialog(MainActivity.this);
+                    pd.setMessage("Please Wait... We're finding you.");
+                    pd.setCancelable(false);
+                    pd.show();
+                }
+
+                if(myCoordinates == null&&(System.currentTimeMillis()-startTime)>30000){
+                    if(pd.isShowing())
+                        pd.dismiss();
+
+                    AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                    builder.setMessage("Your GPS needs to be enabled. Do you want to open GPS Settings?")
+                            .setPositiveButton("OK",
+                                    new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                            startActivity(new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS));
+                                            dialog.dismiss();
+                                        }
+                                    })
+                            .setNegativeButton("Cancel",
+                                    new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                            dialog.cancel();
+                                        }
+                                    });
+                    builder.create().show();
+
+                } else {
+
+                    url_request = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?" +
+                            "location=" + myCoordinates +
+                            "&radius=1000&types=restaurant|cafe&" +
+                            "key=" + API_KEY;
+
+                    new JsonTask().execute(url_request);
+                }
             }
         });
     }
@@ -84,14 +121,15 @@ public class MainActivity extends AppCompatActivity {
                     if (grantResults.length > 0
                             && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                         Toast.makeText(MainActivity.this,
-                                "permission was granted, :)",
+                                "Location permissions has been granted...",
                                 Toast.LENGTH_LONG).show();
                         getLocation();
 
                     } else {
                         Toast.makeText(MainActivity.this,
-                                "permission denied, ...:(",
+                                "Location permissions has been denied...",
                                 Toast.LENGTH_LONG).show();
+                        this.finishAffinity();
                     }
 
                 }
@@ -140,14 +178,6 @@ public class MainActivity extends AppCompatActivity {
 
         }
     };
-
-    private void gpsDialog() {
-            AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(this);
-            dialogBuilder.setTitle("JSON");
-            dialogBuilder.setMessage(placeURL);
-            AlertDialog dialog = dialogBuilder.create();
-            dialog.show();
-    }
 
     private class JsonTask extends AsyncTask<String,String,String>{
         @Override
@@ -216,6 +246,4 @@ public class MainActivity extends AppCompatActivity {
             startActivity(intent);
         }
     }
-
-
 }
